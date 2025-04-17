@@ -32,7 +32,7 @@ The platform is built with React, TypeScript, and Tailwind CSS, using Redux for 
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/cyber-guardian-africa.git
+   git clone https://github.com/masneltef/cyber-guardian-africa.git
    cd cyber-guardian-africa
    ```
 
