@@ -12,12 +12,15 @@ import Navigation from './components/layout/Navigation';
 // Pages
 import Home from './pages/Home';
 import MissionSelect from './pages/missions/MissionSelect';
-import MissionStory from './pages/missions/MissionStory'; // New story page
+import MissionStory from './pages/missions/MissionStory';
 import Settings from './pages/Settings';
 
-// These would be implemented as you develop more features
+// Mission Pages
 import MissionDetail from './pages/missions/MissionDetail';
-import MissionQuiz from './pages/missions/MissionQuiz'; // For the quiz section
+import MissionQuiz from './pages/missions/MissionQuiz';
+
+// Password Mission Components
+import PasswordMission from './pages/missions/PasswordMission';
 
 function App() {
   return (
@@ -42,6 +45,9 @@ function App() {
                   {/* Story and Quiz Routes */}
                   <Route path="/missions/:missionId/story" element={<MissionStory />} />
                   <Route path="/missions/:missionId/quiz" element={<MissionQuiz />} />
+                  
+                  {/* Specific Mission Routes */}
+                  <Route path="/missions/password-palace" element={<PasswordMission />} />
                   
                   {/* Add more routes as needed */}
                 </Routes>

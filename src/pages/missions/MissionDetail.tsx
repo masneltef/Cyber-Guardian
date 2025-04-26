@@ -1,350 +1,272 @@
 // src/pages/missions/MissionDetail.tsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../features/store';
-import { fetchMissionById, markMissionCompleted } from '../../features/missions/missionsSlice';
+import { motion } from 'framer-motion';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
-import { motion, AnimatePresence } from 'framer-motion';
-
-enum MissionStage {
-  LOADING,
-  STORY,
-  QUIZ,
-  COMPLETE
-}
+import { fetchMissionById } from '../../features/missions/missionsSlice';
+import { startMission } from '../../features/progress/progressSlice';
 
 const MissionDetail: React.FC = () => {
   const { missionId } = useParams<{ missionId: string }>();
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { settings } = useSensorySettings();
-  const { currentMission, status, error } = useSelector((state: RootState) => state.missions);
+  const missionsState = useSelector((state: RootState) => state.missions);
+  const progressState = useSelector((state: RootState) => state.progress);
   
-  const [stage, setStage] = useState<MissionStage>(MissionStage.LOADING);
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
-  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean | null>(null);
-  const [quizScore, setQuizScore] = useState(0);
-  
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Local state to track if we're loading mission data
+  const [loading, setLoading] = useState(true);
 
-  // Fetch mission data when component mounts
+  // Fetch mission details when component mounts
   useEffect(() => {
     if (missionId) {
-      dispatch(fetchMissionById(missionId) as any);
+      setLoading(true);
+      dispatch(fetchMissionById(missionId) as any)
+        .then(() => setLoading(false))
+        .catch(() => setLoading(false));
     }
   }, [dispatch, missionId]);
 
-  // Set stage when mission data is loaded
-  useEffect(() => {
-    if (status === 'succeeded' && currentMission) {
-      setStage(MissionStage.STORY);
-    }
-  }, [status, currentMission]);
+  // Extract the mission and mission progress
+  const mission = missionsState?.currentMission || null;
+  const missionProgress = missionId ? progressState?.missions[missionId] || null : null;
 
-  // Play audio narration if available
-  useEffect(() => {
-    if (
-      stage === MissionStage.STORY && 
-      currentMission?.storyModules[currentStoryIndex]?.audioUrl && 
-      settings.audioEnabled && 
-      settings.voiceNarrationEnabled
-    ) {
-      if (audioRef.current) {
-        audioRef.current.src = currentMission.storyModules[currentStoryIndex].audioUrl || '';
-        audioRef.current.volume = settings.audioVolume / 100;
-        audioRef.current.play().catch(e => console.error('Error playing audio:', e));
-      }
-    }
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
-  }, [currentStoryIndex, stage, currentMission, settings]);
-
-  const handleNextStory = () => {
-    if (currentMission && currentStoryIndex < currentMission.storyModules.length - 1) {
-      setCurrentStoryIndex(currentStoryIndex + 1);
-    } else {
-      // Move to quiz section after completing all story modules
-      setStage(MissionStage.QUIZ);
-    }
-  };
-
-  const handleAnswerSelect = (answer: string) => {
-    setSelectedAnswer(answer);
-    
-    if (currentMission && currentMission.quizzes[currentQuizIndex]) {
-      const isCorrect = answer === currentMission.quizzes[currentQuizIndex].correctAnswer;
-      setIsAnswerCorrect(isCorrect);
+  // Handle starting the mission
+  const handleStartMission = () => {
+    if (missionId) {
+      // Record the mission start in progress tracker
+      dispatch(startMission(missionId));
       
-      if (isCorrect) {
-        setQuizScore(quizScore + 1);
+      // Navigate to story page
+      navigate(`/missions/${missionId}/story`);
+    }
+  };
+
+  // Handle continuing the mission
+  const handleContinueMission = () => {
+    if (missionId) {
+      if (missionProgress && missionProgress.storyProgress >= 100) {
+        // If story is complete, go to quiz
+        navigate(`/missions/${missionId}/quiz`);
+      } else {
+        // Otherwise continue with story
+        navigate(`/missions/${missionId}/story`);
       }
     }
   };
 
-  const handleNextQuestion = () => {
-    setSelectedAnswer(null);
-    setIsAnswerCorrect(null);
+  const getAnimationProps = () => {
+    if (settings.reducedAnimations) {
+      return {
+        initial: {},
+        animate: {},
+        transition: { duration: 0.1 }
+      };
+    }
     
-    if (currentMission && currentQuizIndex < currentMission.quizzes.length - 1) {
-      setCurrentQuizIndex(currentQuizIndex + 1);
-    } else {
-      // Complete the mission
-      setStage(MissionStage.COMPLETE);
-      if (missionId) {
-        dispatch(markMissionCompleted(missionId));
-      }
-    }
+    return {
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      transition: { duration: 0.5 }
+    };
   };
 
-  if (status === 'loading' || stage === MissionStage.LOADING) {
+  // Loading state
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-lg">Loading mission...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-lg">Loading mission details...</p>
         </div>
       </div>
     );
   }
 
-  if (status === 'failed') {
+  // Error state - mission not found
+  if (!mission && !loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>Failed to load mission: {error}</p>
-          <button 
-            className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
+          <p className="font-bold">Error</p>
+          <p>Mission not found. The mission you're looking for doesn't exist or has been removed.</p>
+          <button
             onClick={() => navigate('/missions')}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
-            Back to Missions
+            Return to Missions
           </button>
         </div>
       </div>
     );
   }
 
-  if (!currentMission) {
+  // If mission is locked
+  if (mission?.isLocked) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-          <p>Mission not found.</p>
-          <button 
-            className="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            onClick={() => navigate('/missions')}
-          >
-            Back to Missions
-          </button>
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
+            <h2 className="font-bold text-lg mb-2">Mission Locked</h2>
+            <p>This mission is currently locked. Complete previous missions to unlock this one.</p>
+            <button
+              onClick={() => navigate('/missions')}
+              className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+            >
+              Return to Missions
+            </button>
+          </div>
         </div>
       </div>
     );
   }
+
+  // Determine mission title for display
+  const getMissionTitle = () => {
+    if (mission?.title) return mission.title;
+    
+    switch (missionId) {
+      case 'password-palace':
+      case 'mission-1':
+        return "Mika's Password Palace";
+      // Add cases for other missions
+      default:
+        return "Mission";
+    }
+  };
 
   return (
-    <div className={`container mx-auto px-4 py-8 ${settings.highContrast ? 'bg-white text-black' : ''}`}>
-      {/* Hidden audio element for narration */}
-      <audio ref={audioRef} />
-      
-      {/* Mission Header */}
-      <div className="mb-6">
-        <h1 className={`${settings.fontSize === 'large' ? 'text-3xl' : settings.fontSize === 'small' ? 'text-xl' : 'text-2xl'} font-bold`}>
-          {currentMission.title}
-        </h1>
-        <p className="text-gray-600 mt-2">{currentMission.description}</p>
-        
-        {/* Progress Indicator */}
-        <div className="mt-4 bg-gray-200 rounded-full h-2.5">
-          <div 
-            className="bg-blue-600 h-2.5 rounded-full" 
-            style={{ 
-              width: `${stage === MissionStage.STORY 
-                ? (currentStoryIndex / Math.max(currentMission.storyModules.length, 1)) * 50 
-                : stage === MissionStage.QUIZ 
-                  ? 50 + (currentQuizIndex / Math.max(currentMission.quizzes.length, 1)) * 50
-                  : stage === MissionStage.COMPLETE ? '100%' : '0%'
-              }%` 
-            }}
-          ></div>
+    <div className="container mx-auto px-4 py-8">
+      <motion.div
+        className="max-w-4xl mx-auto"
+        {...getAnimationProps()}
+      >
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="relative">
+            <img 
+              src={mission?.thumbnailUrl || `/assets/images/missions/${missionId}-banner.png`}
+              alt={getMissionTitle()} 
+              className="w-full h-48 object-cover"
+              onError={(e) => {
+                // Fallback image if the mission image fails to load
+                e.currentTarget.src = 'https://via.placeholder.com/1200x400/4299e1/ffffff?text=Mission+Banner';
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
+            <h1 className={`absolute bottom-4 left-4 text-white font-bold ${settings.fontSize === 'large' ? 'text-3xl' : settings.fontSize === 'small' ? 'text-xl' : 'text-2xl'}`}>
+              {getMissionTitle()}
+            </h1>
+          </div>
+          
+          <div className="p-6">
+            <div className="mb-6">
+              <div className="flex items-center space-x-2 mb-2">
+                {mission?.difficulty && (
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    mission.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                    mission.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {mission.difficulty.charAt(0).toUpperCase() + mission.difficulty.slice(1)}
+                  </span>
+                )}
+                
+                {mission?.ageGroup && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    Ages {mission.ageGroup}
+                  </span>
+                )}
+                
+                {mission?.culturalContext && (
+                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                    {mission.culturalContext}
+                  </span>
+                )}
+                
+                {mission?.isCompleted && (
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                    Completed
+                  </span>
+                )}
+              </div>
+              
+              <p className={`mb-4 ${settings.fontSize === 'large' ? 'text-lg' : settings.fontSize === 'small' ? 'text-sm' : 'text-base'}`}>
+                {mission?.description || missionId === 'password-palace' || missionId === 'mission-1' ? 
+                  "Join Mika, a clever young girl who helps protect her village's digital marketplace by learning about password security. Follow her adventure and help her create strong passwords to keep the marketplace safe from the Digital Trickster!" 
+                  : "Start this cybersecurity mission to learn important digital safety skills."}
+              </p>
+              
+              {(missionId === 'password-palace' || missionId === 'mission-1') && (
+                <div className="border-t border-b border-gray-200 py-4 my-4">
+                  <h2 className={`font-semibold mb-2 ${settings.fontSize === 'large' ? 'text-xl' : settings.fontSize === 'small' ? 'text-base' : 'text-lg'}`}>
+                    What You'll Learn:
+                  </h2>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>How to create strong passwords</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>Why passwords are important</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>Common password mistakes to avoid</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>Techniques for remembering strong passwords</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
+              
+              {/* Mission Progress */}
+              {missionProgress && (
+                <div className="mb-4">
+                  <h3 className={`font-semibold mb-2 ${settings.fontSize === 'small' ? 'text-sm' : 'text-base'}`}>
+                    Your Progress:
+                  </h3>
+                  <div className="bg-gray-200 rounded-full h-2 mb-1">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                      style={{width: `${missionProgress.storyProgress || 0}%`}}
+                    ></div>
+                  </div>
+                  <p className={`text-right text-gray-600 ${settings.fontSize === 'small' ? 'text-xs' : 'text-sm'}`}>
+                    {missionProgress.storyProgress >= 100 ? 'Story completed' : `${missionProgress.storyProgress || 0}% complete`}
+                  </p>
+                </div>
+              )}
+              
+              <p className={`italic text-gray-600 ${settings.fontSize === 'small' ? 'text-xs' : 'text-sm'}`}>
+                This mission takes approximately 15-20 minutes to complete and includes a story followed by a quiz.
+              </p>
+            </div>
+            
+            <div className="flex justify-center">
+              {missionProgress ? (
+                <button
+                  onClick={handleContinueMission}
+                  className={`px-6 py-3 bg-blue-600 text-white rounded-lg ${settings.highContrast ? 'border-2 border-black' : ''} hover:bg-blue-700 transition-colors`}
+                >
+                  {missionProgress.isCompleted ? 'Replay Mission' : 'Continue Mission'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleStartMission}
+                  className={`px-6 py-3 bg-blue-600 text-white rounded-lg ${settings.highContrast ? 'border-2 border-black' : ''} hover:bg-blue-700 transition-colors`}
+                >
+                  Start Mission
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-      
-      {/* Main Content Area */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <AnimatePresence mode="wait">
-          {/* Story Stage */}
-          {stage === MissionStage.STORY && currentMission.storyModules.length > 0 && (
-            <motion.div
-              key="story"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: settings.reducedAnimations ? 0.1 : 0.5 }}
-            >
-              <div className="mb-6">
-                <h2 className={`${settings.fontSize === 'large' ? 'text-2xl' : settings.fontSize === 'small' ? 'text-lg' : 'text-xl'} font-semibold mb-4`}>
-                  {currentMission.storyModules[currentStoryIndex].title}
-                </h2>
-                
-                <p className={`${settings.fontSize === 'large' ? 'text-lg' : settings.fontSize === 'small' ? 'text-sm' : 'text-base'}`}>
-                  {currentMission.storyModules[currentStoryIndex].content}
-                </p>
-              </div>
-              
-              <div className="flex justify-between mt-8">
-                <button
-                  className={`px-4 py-2 rounded ${
-                    currentStoryIndex > 0 
-                      ? 'bg-gray-500 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  onClick={() => currentStoryIndex > 0 && setCurrentStoryIndex(currentStoryIndex - 1)}
-                  disabled={currentStoryIndex === 0}
-                >
-                  Previous
-                </button>
-                
-                <button
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                  onClick={handleNextStory}
-                >
-                  {currentStoryIndex < currentMission.storyModules.length - 1 ? 'Next' : 'Start Quiz'}
-                </button>
-              </div>
-            </motion.div>
-          )}
-          
-          {/* Quiz Stage */}
-          {stage === MissionStage.QUIZ && currentMission.quizzes.length > 0 && (
-            <motion.div
-              key="quiz"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: settings.reducedAnimations ? 0.1 : 0.5 }}
-            >
-              <div className="mb-6">
-                <h2 className={`${settings.fontSize === 'large' ? 'text-2xl' : settings.fontSize === 'small' ? 'text-lg' : 'text-xl'} font-semibold mb-4`}>
-                  Question {currentQuizIndex + 1} of {currentMission.quizzes.length}
-                </h2>
-                
-                <p className={`${settings.fontSize === 'large' ? 'text-lg' : settings.fontSize === 'small' ? 'text-sm' : 'text-base'} mb-6`}>
-                  {currentMission.quizzes[currentQuizIndex].question}
-                </p>
-                
-                {/* Visual cue/hint if available */}
-                {currentMission.quizzes[currentQuizIndex].visualCueUrl && (
-                  <div className="mb-4">
-                    <img 
-                      src={currentMission.quizzes[currentQuizIndex].visualCueUrl} 
-                      alt="Visual hint" 
-                      className="max-w-full h-auto rounded-lg mx-auto"
-                      style={{ maxHeight: '200px' }}
-                    />
-                  </div>
-                )}
-                
-                {/* Answer Options */}
-                <div className="space-y-3">
-                  {currentMission.quizzes[currentQuizIndex].options.map((option, index) => (
-                    <button
-                      key={index}
-                      className={`w-full text-left p-4 rounded-lg border-2 ${
-                        selectedAnswer === option
-                          ? isAnswerCorrect 
-                            ? 'bg-green-100 border-green-500'
-                            : 'bg-red-100 border-red-500'
-                          : 'border-gray-300 hover:border-blue-500'
-                      } ${settings.highContrast ? 'border-black' : ''}`}
-                      onClick={() => !selectedAnswer && handleAnswerSelect(option)}
-                      disabled={selectedAnswer !== null}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Feedback on answer */}
-                {selectedAnswer && (
-                  <div className={`mt-4 p-4 rounded-lg ${isAnswerCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
-                    <p className={`font-semibold ${isAnswerCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                      {isAnswerCorrect 
-                        ? 'Correct! Well done!' 
-                        : `Incorrect. The correct answer is: ${currentMission.quizzes[currentQuizIndex].correctAnswer}`
-                      }
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex justify-between mt-8">
-                {selectedAnswer ? (
-                  <button
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                    onClick={handleNextQuestion}
-                  >
-                    {currentQuizIndex < currentMission.quizzes.length - 1 ? 'Next Question' : 'Complete Mission'}
-                  </button>
-                ) : (
-                  <div></div> // Empty div to maintain spacing with flex justify-between
-                )}
-              </div>
-            </motion.div>
-          )}
-          
-          {/* Completion Stage */}
-          {stage === MissionStage.COMPLETE && (
-            <motion.div
-              key="complete"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: settings.reducedAnimations ? 0.1 : 0.5 }}
-              className="text-center py-8"
-            >
-              <div className="mb-6">
-                <h2 className={`${settings.fontSize === 'large' ? 'text-3xl' : settings.fontSize === 'small' ? 'text-xl' : 'text-2xl'} font-bold mb-4`}>
-                  Mission Complete!
-                </h2>
-                
-                <div className="inline-block bg-green-100 rounded-full p-4 mb-6">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                
-                <p className={`${settings.fontSize === 'large' ? 'text-xl' : settings.fontSize === 'small' ? 'text-base' : 'text-lg'} mb-4`}>
-                  Congratulations! You have completed the "{currentMission.title}" mission.
-                </p>
-                
-                <p className={`${settings.fontSize === 'large' ? 'text-lg' : settings.fontSize === 'small' ? 'text-sm' : 'text-base'} text-gray-600 mb-6`}>
-                  You answered {quizScore} out of {currentMission.quizzes.length} questions correctly.
-                </p>
-                
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <button
-                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-                    onClick={() => navigate('/missions')}
-                  >
-                    Back to All Missions
-                  </button>
-                  
-                  <button
-                    className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                    onClick={() => navigate('/dashboard')}
-                  >
-                    Go to Dashboard
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   );
 };

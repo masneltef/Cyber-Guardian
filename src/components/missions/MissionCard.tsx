@@ -1,6 +1,5 @@
 // src/components/missions/MissionCard.tsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
 
@@ -14,6 +13,7 @@ interface MissionCardProps {
   isCompleted: boolean;
   isLocked: boolean;
   completionPercentage?: number;
+  onClick?: () => void;
 }
 
 const MissionCard: React.FC<MissionCardProps> = ({
@@ -25,9 +25,9 @@ const MissionCard: React.FC<MissionCardProps> = ({
   thumbnailUrl,
   isCompleted,
   isLocked,
-  completionPercentage = 0
+  completionPercentage = 0,
+  onClick
 }) => {
-  const navigate = useNavigate();
   const { settings } = useSensorySettings();
 
   // Animations
@@ -53,14 +53,14 @@ const MissionCard: React.FC<MissionCardProps> = ({
   };
 
   const handleClick = () => {
-    if (!isLocked) {
-      navigate(`/missions/${id}`);
+    if (!isLocked && onClick) {
+      onClick();
     }
   };
 
   // Fallback image handler
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    e.currentTarget.src = '/assets/images/mission-placeholder.png';
+    e.currentTarget.src = 'https://via.placeholder.com/300x200/4299e1/ffffff?text=Mission';
   };
 
   return (
@@ -74,7 +74,7 @@ const MissionCard: React.FC<MissionCardProps> = ({
       <div className="relative group">
         {/* Mission Image */}
         <img
-          src={thumbnailUrl || '/assets/images/mission-placeholder.png'}
+          src={thumbnailUrl || `https://via.placeholder.com/300x200/4299e1/ffffff?text=${title}`}
           alt={title}
           className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
           onError={handleImageError}
@@ -131,6 +131,12 @@ const MissionCard: React.FC<MissionCardProps> = ({
           {isCompleted && (
             <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">
               Completed
+            </span>
+          )}
+          
+          {!isCompleted && !isLocked && completionPercentage > 0 && (
+            <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs">
+              In Progress
             </span>
           )}
         </div>

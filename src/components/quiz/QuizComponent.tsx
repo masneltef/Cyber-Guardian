@@ -1,7 +1,11 @@
 // src/components/quiz/QuizComponent.tsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDispatch } from 'react-redux';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
+import { submitAnswer, completeQuiz, startQuiz } from '../../features/quiz/quizSlice';
+import { addReward } from '../../features/rewards/rewardsSlice';
+import { completeMission } from '../../features/progress/progressSlice';
 
 export interface QuizQuestion {
   id: string;
@@ -14,6 +18,7 @@ export interface QuizQuestion {
 
 interface QuizComponentProps {
   questions: QuizQuestion[];
+  missionId?: string; // Optional - only needed if tracking progress
   onComplete: (score: number, totalQuestions: number) => void;
   allowRetry?: boolean;
   showFeedback?: boolean;
@@ -22,11 +27,13 @@ interface QuizComponentProps {
 
 const QuizComponent: React.FC<QuizComponentProps> = ({
   questions,
+  missionId,
   onComplete,
   allowRetry = true,
   showFeedback = true,
   showProgress = true,
 }) => {
+  const dispatch = useDispatch();
   const { settings } = useSensorySettings();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -35,31 +42,65 @@ const QuizComponent: React.FC<QuizComponentProps> = ({
   const [attempted, setAttempted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [animationKey, setAnimationKey] = useState(0); // For retrigger animations
+  const [quizStartTime, setQuizStartTime] = useState(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [questionTimes, setQuestionTimes] = useState<number[]>([]);
 
   const currentQuestion = questions[currentQuestionIndex];
 
+  // Start the quiz in Redux when component mounts
   useEffect(() => {
-    // Reset state when question changes
+    if (missionId) {
+      dispatch(startQuiz(`${missionId}-quiz`));
+    }
+    setQuizStartTime(Date.now());
+    setQuestionStartTime(Date.now());
+  }, [dispatch, missionId]);
+
+  // Reset state when question changes
+  useEffect(() => {
     setSelectedAnswer(null);
     setIsAnswerCorrect(null);
     setAttempted(false);
     setRetryCount(0);
     setAnimationKey(prev => prev + 1); // Change key to retrigger animations
+    setQuestionStartTime(Date.now());
   }, [currentQuestionIndex]);
 
   const handleAnswerSelect = (answer: string) => {
     if (attempted && !allowRetry) return;
     
-    setSelectedAnswer(answer);
     const isCorrect = answer === currentQuestion.correctAnswer;
+    
+    setSelectedAnswer(answer);
     setIsAnswerCorrect(isCorrect);
     setAttempted(true);
+
+    // Record time taken for question
+    const timeTaken = Date.now() - questionStartTime;
+    const updatedTimes = [...questionTimes];
+    updatedTimes[currentQuestionIndex] = timeTaken;
+    setQuestionTimes(updatedTimes);
+
+    // Dispatch answer to Redux if we have a mission ID
+    if (missionId) {
+      dispatch(submitAnswer({
+        questionId: currentQuestion.id,
+        answer,
+        isCorrect
+      }));
+    }
 
     if (isCorrect) {
       // Increase score only if correct on first attempt or if retry is not allowed
       if (!attempted || !allowRetry) {
         setScore(score + 1);
       }
+    }
+
+    // Add haptic feedback if enabled
+    if (settings.hapticsEnabled && navigator.vibrate) {
+      navigator.vibrate(isCorrect ? [100] : [100, 50, 100]);
     }
   };
 
@@ -68,6 +109,49 @@ const QuizComponent: React.FC<QuizComponentProps> = ({
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       // Quiz completed
+      const totalQuizTime = Date.now() - quizStartTime;
+      
+      // Dispatch quiz completion to Redux if we have a mission ID
+      if (missionId) {
+        dispatch(completeQuiz({
+          quizId: `${missionId}-quiz`,
+          score,
+          totalQuestions: questions.length
+        }));
+        
+        // Complete the mission in progress tracker
+        dispatch(completeMission({
+          missionId,
+          quizScore: score
+        }));
+        
+        // Award a reward based on performance
+        if (score >= questions.length * 0.7) { // 70% or better
+          let rewardType: 'digital_beads' | 'guardian_shield' | 'certificate';
+          let rewardTitle: string;
+          
+          if (score === questions.length) {
+            rewardType = 'guardian_shield';
+            rewardTitle = 'Password Mastery Shield';
+          } else if (score >= questions.length * 0.8) {
+            rewardType = 'digital_beads';
+            rewardTitle = 'Password Expert Beads';
+          } else {
+            rewardType = 'certificate';
+            rewardTitle = 'Password Guardian Certificate';
+          }
+          
+          dispatch(addReward({
+            id: `${missionId}-reward-${Date.now()}`,
+            type: rewardType,
+            title: rewardTitle,
+            description: `Earned by completing the Password Security Quiz with a score of ${score}/${questions.length}`,
+            imageUrl: `/assets/images/rewards/${rewardType}-${missionId}.png`
+          }));
+        }
+      }
+      
+      // Call onComplete callback
       onComplete(score, questions.length);
     }
   };
@@ -123,7 +207,7 @@ const QuizComponent: React.FC<QuizComponentProps> = ({
       }
     };
     
-    return baseSizes[size][settings.fontSize];
+    return baseSizes[size][settings.fontSize || 'medium'];
   };
 
   if (!currentQuestion) {

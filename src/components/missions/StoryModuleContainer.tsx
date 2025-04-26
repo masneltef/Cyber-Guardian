@@ -1,5 +1,5 @@
 // src/components/missions/StoryModuleContainer.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
 import StoryModule from './StoryModule';
@@ -21,20 +21,38 @@ export interface StoryModuleData {
 interface StoryModuleContainerProps {
   modules: StoryModuleData[];
   onComplete: () => void;
+  onModuleChange?: (index: number) => void;
 }
 
 const StoryModuleContainer: React.FC<StoryModuleContainerProps> = ({
   modules,
-  onComplete
+  onComplete,
+  onModuleChange
 }) => {
   const { settings } = useSensorySettings();
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [moduleStartTime, setModuleStartTime] = useState(Date.now());
+  const [moduleTimes, setModuleTimes] = useState<number[]>([]);
   
   const currentModule = modules[currentModuleIndex];
   
+  // Notify parent component of module changes
+  useEffect(() => {
+    if (onModuleChange) {
+      onModuleChange(currentModuleIndex);
+    }
+    setModuleStartTime(Date.now());
+  }, [currentModuleIndex, onModuleChange]);
+  
   const handleNext = () => {
+    // Record time spent on this module
+    const timeSpent = Date.now() - moduleStartTime;
+    const updatedTimes = [...moduleTimes];
+    updatedTimes[currentModuleIndex] = timeSpent;
+    setModuleTimes(updatedTimes);
+    
     if (currentModuleIndex < modules.length - 1) {
       setCurrentModuleIndex(currentModuleIndex + 1);
       setIsAudioPlaying(false);
@@ -53,6 +71,20 @@ const StoryModuleContainer: React.FC<StoryModuleContainerProps> = ({
   const toggleAudio = () => {
     setIsAudioPlaying(!isAudioPlaying);
   };
+  
+  // Handle audio playback
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isAudioPlaying) {
+        audioRef.current.play().catch(error => {
+          console.error('Audio playback error:', error);
+          setIsAudioPlaying(false);
+        });
+      } else if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    }
+  }, [isAudioPlaying]);
   
   return (
     <div className="space-y-6">
@@ -85,6 +117,16 @@ const StoryModuleContainer: React.FC<StoryModuleContainerProps> = ({
           />
         </motion.div>
       </AnimatePresence>
+      
+      {/* Audio element (hidden) */}
+      {currentModule.audioUrl && (
+        <audio 
+          ref={audioRef} 
+          src={currentModule.audioUrl} 
+          preload="auto"
+          onEnded={() => setIsAudioPlaying(false)}
+        />
+      )}
       
       {/* Controls */}
       <StoryModuleControls

@@ -1,3 +1,4 @@
+// src/features/store.ts
 import { configureStore } from '@reduxjs/toolkit';
 import missionsReducer from './missions/missionsSlice';
 import quizReducer from './quiz/quizSlice';
