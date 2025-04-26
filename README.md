@@ -32,8 +32,8 @@ The platform is built with React, TypeScript, and Tailwind CSS, using Redux for 
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/masneltef/cyber-guardian.git
-   cd cyber-guardian
+   git clone https://github.com/masneltef/Cyber-Guardian.git
+   cd Cyber-Guardian
    ```
 
 2. Install dependencies
