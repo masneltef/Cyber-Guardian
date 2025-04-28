@@ -6,7 +6,6 @@ import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
 import StoryModuleContainer from '../../components/missions/StoryModuleContainer';
-// Fix the import path to use the correct component
 import QuizComponent from '../../components/quiz/QuizComponent';
 import { passwordStoryModules, passwordQuizQuestions } from '../../data/missions/passwordMission';
 import { markMissionCompleted } from '../../features/missions/missionsSlice';

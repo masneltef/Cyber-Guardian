@@ -7,6 +7,7 @@ import { fetchMissions, Mission } from '../../features/missions/missionsSlice';
 import MissionCard from '../../components/missions/MissionCard';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
 import { motion } from 'framer-motion';
+import { getMissionImage } from '../../utils/imageUtils';
 
 const MissionSelect: React.FC = () => {
   const dispatch = useDispatch();
@@ -227,9 +228,12 @@ const MissionSelect: React.FC = () => {
             <div className="md:flex">
               <div className="md:w-1/3">
                 <img 
-                  src="https://via.placeholder.com/500x300/4299e1/ffffff?text=Password+Palace"
+                  src={getMissionImage('password-palace')}
                   alt="Mika's Password Palace" 
                   className="w-full h-48 md:h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://via.placeholder.com/500x300/4299e1/ffffff?text=Password+Palace';
+                  }}
                 />
               </div>
               <div className="md:w-2/3 p-6">

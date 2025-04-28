@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
+import { getMissionImage } from '../../utils/imageUtils';
 
 interface MissionCardProps {
   id: string;
@@ -72,9 +73,9 @@ const MissionCard: React.FC<MissionCardProps> = ({
       onClick={handleClick}
     >
       <div className="relative group">
-        {/* Mission Image */}
+        {/* Mission Image - Using the utility function */}
         <img
-          src={thumbnailUrl || `https://via.placeholder.com/300x200/4299e1/ffffff?text=${title}`}
+          src={getMissionImage(id)}
           alt={title}
           className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
           onError={handleImageError}

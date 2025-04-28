@@ -1,5 +1,5 @@
 // src/App.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './features/store';
@@ -23,6 +23,27 @@ import MissionQuiz from './pages/missions/MissionQuiz';
 import PasswordMission from './pages/missions/PasswordMission';
 
 function App() {
+  // Debug image paths
+  useEffect(() => {
+    // This will help verify if the image paths are correct
+    const imagePaths = [
+      '/assets/images/missions/MikaPassword.png',
+      '/assets/images/missions/PhisherForest.png',
+      '/assets/images/missions/DigitalDefenders.png',
+      '/assets/images/missions/SafariSecrets.png',
+      '/assets/images/missions/SocialVillage.png',
+      '/assets/images/missions/TricksterMessage.png'
+    ];
+    
+    console.log('Checking image paths availability:');
+    imagePaths.forEach(path => {
+      const img = new Image();
+      img.onload = () => console.log(`✅ Image loaded successfully: ${path}`);
+      img.onerror = () => console.error(`❌ Image failed to load: ${path}`);
+      img.src = path;
+    });
+  }, []);
+
   return (
     <Provider store={store}>
       <AuthProvider>

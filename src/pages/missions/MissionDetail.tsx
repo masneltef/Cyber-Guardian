@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
 import { fetchMissionById } from '../../features/missions/missionsSlice';
 import { startMission } from '../../features/progress/progressSlice';
+import { getMissionImage } from '../../utils/imageUtils';
 
 const MissionDetail: React.FC = () => {
   const { missionId } = useParams<{ missionId: string }>();
@@ -131,7 +132,16 @@ const MissionDetail: React.FC = () => {
       case 'password-palace':
       case 'mission-1':
         return "Mika's Password Palace";
-      // Add cases for other missions
+      case 'phishing-forest':
+        return "The Phisher in the Forest";
+      case 'trickster-message':
+        return "The Trickster's Messages";
+      case 'social-village':
+        return "The Social Village";
+      case 'digital-defenders':
+        return "Digital Defenders";
+      case 'safari-secrets':
+        return "Safari Secrets";
       default:
         return "Mission";
     }
@@ -146,7 +156,7 @@ const MissionDetail: React.FC = () => {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="relative">
             <img 
-              src={mission?.thumbnailUrl || `/assets/images/missions/${missionId}-banner.png`}
+              src={getMissionImage(missionId || '')}
               alt={getMissionTitle()} 
               className="w-full h-48 object-cover"
               onError={(e) => {
@@ -193,36 +203,11 @@ const MissionDetail: React.FC = () => {
               </div>
               
               <p className={`mb-4 ${settings.fontSize === 'large' ? 'text-lg' : settings.fontSize === 'small' ? 'text-sm' : 'text-base'}`}>
-                {mission?.description || missionId === 'password-palace' || missionId === 'mission-1' ? 
-                  "Join Mika, a clever young girl who helps protect her village's digital marketplace by learning about password security. Follow her adventure and help her create strong passwords to keep the marketplace safe from the Digital Trickster!" 
-                  : "Start this cybersecurity mission to learn important digital safety skills."}
+                {mission?.description || getMissionDescription(missionId)}
               </p>
               
-              {(missionId === 'password-palace' || missionId === 'mission-1') && (
-                <div className="border-t border-b border-gray-200 py-4 my-4">
-                  <h2 className={`font-semibold mb-2 ${settings.fontSize === 'large' ? 'text-xl' : settings.fontSize === 'small' ? 'text-base' : 'text-lg'}`}>
-                    What You'll Learn:
-                  </h2>
-                  <ul className="space-y-2">
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>How to create strong passwords</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>Why passwords are important</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>Common password mistakes to avoid</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>Techniques for remembering strong passwords</span>
-                    </li>
-                  </ul>
-                </div>
-              )}
+              {/* Learning Objectives based on mission */}
+              {getLearningObjectives(missionId)}
               
               {/* Mission Progress */}
               {missionProgress && (
@@ -269,6 +254,93 @@ const MissionDetail: React.FC = () => {
       </motion.div>
     </div>
   );
+};
+
+// Helper function to get mission descriptions based on mission ID
+const getMissionDescription = (missionId: string | undefined): string => {
+  if (!missionId) return "Start this cybersecurity mission to learn important digital safety skills.";
+  
+  switch (missionId) {
+    case 'password-palace':
+    case 'mission-1':
+      return "Join Mika, a clever young girl who helps protect her village's digital marketplace by learning about password security. Follow her adventure and help her create strong passwords to keep the marketplace safe from the Digital Trickster!";
+    case 'phishing-forest':
+      return "Explore the digital forest with Kofi as he learns to identify dangerous phishing traps. Help him spot the signs of fake messages and protect his community from online scams.";
+    case 'trickster-message':
+      return "The village messaging center is facing a challenge! Help identify fake messages from the trickster using visual cues and protect your community from scams.";
+    case 'social-village':
+      return "Join the virtual social gathering space and learn to manage privacy settings and detect cyberbullying. Apply community values to online interactions.";
+    case 'digital-defenders':
+      return "Join the team of young Digital Guardians from across Africa as they protect their digital communities using their unique cybersecurity superpowers.";
+    case 'safari-secrets':
+      return "Embark on a digital safari to discover secrets of online safety. Learn to navigate the wild internet while protecting your personal information.";
+    default:
+      return "Start this cybersecurity mission to learn important digital safety skills.";
+  }
+};
+
+// Helper function to render learning objectives based on mission ID
+const getLearningObjectives = (missionId: string | undefined) => {
+  if (!missionId) return null;
+  
+  switch (missionId) {
+    case 'password-palace':
+    case 'mission-1':
+      return (
+        <div className="border-t border-b border-gray-200 py-4 my-4">
+          <h2 className="font-semibold mb-2 text-lg">
+            What You'll Learn:
+          </h2>
+          <ul className="space-y-2">
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>How to create strong passwords</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>Why passwords are important</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>Common password mistakes to avoid</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>Techniques for remembering strong passwords</span>
+            </li>
+          </ul>
+        </div>
+      );
+    case 'phishing-forest':
+      return (
+        <div className="border-t border-b border-gray-200 py-4 my-4">
+          <h2 className="font-semibold mb-2 text-lg">
+            What You'll Learn:
+          </h2>
+          <ul className="space-y-2">
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>How to identify phishing attempts</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>Common signs of suspicious messages</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>What information should never be shared online</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>How to report suspicious messages</span>
+            </li>
+          </ul>
+        </div>
+      );
+    // Add other mission objectives here...
+    default:
+      return null;
+  }
 };
 
 export default MissionDetail;

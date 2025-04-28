@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
+import { getMissionImage } from '../../utils/imageUtils';
 
 // Define visual themes that can be used
 export type VisualTheme = 
@@ -16,12 +17,16 @@ interface StoryVisualizerProps {
   theme: VisualTheme;
   characters: string[];
   animated?: boolean;
+  missionId?: string;
+  backgroundImage?: string;
 }
 
 const StoryVisualizer: React.FC<StoryVisualizerProps> = ({
   theme,
   characters,
-  animated = true
+  animated = true,
+  missionId,
+  backgroundImage
 }) => {
   const { settings } = useSensorySettings();
   
@@ -64,15 +69,41 @@ const StoryVisualizer: React.FC<StoryVisualizerProps> = ({
   
   const { bg, color, icon } = themeStyles[theme];
   
+  // Get appropriate mission background based on missionId
+  const getBackgroundStyle = () => {
+    if (backgroundImage) {
+      return {
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      };
+    }
+    
+    if (missionId) {
+      const missionImage = getMissionImage(missionId);
+      if (missionImage) {
+        return {
+          backgroundImage: `url(${missionImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.3
+        };
+      }
+    }
+    
+    return {};
+  };
+  
   return (
-    <div className={`relative rounded-lg overflow-hidden ${bg} ${color} p-4 h-64 ${settings.highContrast ? 'border-2 border-black' : ''}`}>
+    <div 
+      className={`relative rounded-lg overflow-hidden ${bg} ${color} p-4 h-64 ${settings.highContrast ? 'border-2 border-black' : ''}`}
+      style={getBackgroundStyle()}
+    >
       <div className="absolute top-2 right-2 text-2xl">{icon}</div>
       
       {/* Scene Background */}
-      <div className="absolute inset-0">
-        {/* This would be a culturally relevant scene based on the theme */}
-        {/* For now we'll use a placeholder representation */}
-        <div className={`h-full w-full flex items-end justify-center ${bg}`}>
+      <div className="absolute inset-0 z-0">
+        <div className={`h-full w-full flex items-end justify-center`}>
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-amber-800 to-transparent opacity-20"></div>
           
           {/* Different scene elements for each theme */}
@@ -84,26 +115,12 @@ const StoryVisualizer: React.FC<StoryVisualizerProps> = ({
             </div>
           )}
           
-          {theme === 'marketplace' && (
-            <div className="absolute bottom-0 w-full h-16">
-              <div className="absolute bottom-0 left-10 w-12 h-8 bg-yellow-700"></div>
-              <div className="absolute bottom-0 left-24 w-14 h-10 bg-yellow-800"></div>
-              <div className="absolute bottom-0 right-16 w-16 h-8 bg-yellow-700"></div>
-            </div>
-          )}
-          
-          {theme === 'savanna' && (
-            <div className="absolute bottom-0 w-full h-16">
-              <div className="absolute bottom-0 left-0 right-0 h-8 bg-green-700"></div>
-              <div className="absolute bottom-8 left-10 w-8 h-20 bg-green-900 rounded-t-full"></div>
-              <div className="absolute bottom-8 right-20 w-10 h-24 bg-green-900 rounded-t-full"></div>
-            </div>
-          )}
+          {/* Add other theme rendering here */}
         </div>
       </div>
       
       {/* Characters */}
-      <div className="relative h-full flex items-end justify-around pb-4">
+      <div className="relative h-full z-10 flex items-end justify-around pb-4">
         {characters.map((character, index) => (
           <motion.div
             key={index}
@@ -117,13 +134,32 @@ const StoryVisualizer: React.FC<StoryVisualizerProps> = ({
             
             {/* Name Tag */}
             <div className="text-xs text-center mt-1 px-2 py-1 bg-white bg-opacity-80 rounded">
-              Character {index + 1}
+              {getCharacterName(missionId, index)}
             </div>
           </motion.div>
         ))}
       </div>
     </div>
   );
+};
+
+// Helper function to get character names based on mission
+const getCharacterName = (missionId: string | undefined, index: number): string => {
+  if (!missionId) return `Character ${index + 1}`;
+  
+  switch(missionId) {
+    case 'password-palace':
+    case 'mission-1':
+      return index === 0 ? 'Mika' : index === 1 ? 'Digital Trickster' : `Character ${index + 1}`;
+    case 'phishing-forest':
+      return index === 0 ? 'Kofi' : index === 1 ? 'Forest Guide' : `Character ${index + 1}`;
+    case 'trickster-message':
+      return index === 0 ? 'Tafari' : index === 1 ? 'Village Elder' : `Character ${index + 1}`;
+    case 'social-village':
+      return index === 0 ? 'Zuri' : index === 1 ? 'Social Guardian' : `Character ${index + 1}`;
+    default:
+      return `Character ${index + 1}`;
+  }
 };
 
 export default StoryVisualizer;

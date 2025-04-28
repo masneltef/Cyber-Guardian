@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { useSensorySettings } from '../../context/SensorySettingsContext';
 import StoryModuleContainer from '../../components/missions/StoryModuleContainer';
+import { getMissionImage } from '../../utils/imageUtils';
 
 // Import mission story data
 import { passwordStoryModules } from '../../data/missions/passwordMission';
@@ -33,15 +34,43 @@ const MissionStory: React.FC = () => {
       switch (missionId) {
         case 'password-palace':
         case 'mission-1':
-          modules = passwordStoryModules;
+          // Enhance story modules with correct image paths
+          modules = passwordStoryModules.map(module => ({
+            ...module,
+            imageUrl: module.imageUrl || getMissionImage('password-palace')
+          }));
+          break;
+        case 'phishing-forest':
+          // Sample placeholder for future development
+          modules = [
+            {
+              id: 'phishing-1',
+              title: 'Welcome to the Digital Forest',
+              content: 'Kofi is exploring the digital forest that connects communities across Africa. But there are traps set by phishers!',
+              imageUrl: getMissionImage('phishing-forest'),
+              visualTheme: 'forest',
+              characters: ['🧒🏾', '🦊'],
+              culturalContext: 'West African Forest'
+            },
+            // More modules would go here
+          ];
+          break;
+        case 'trickster-message':
+          // Sample placeholder for future development
+          modules = [
+            {
+              id: 'trickster-1',
+              title: 'The Village Messaging Center',
+              content: 'The village messaging center has been receiving strange messages. Can you help identify which ones are from the trickster?',
+              imageUrl: getMissionImage('trickster-message'),
+              visualTheme: 'village',
+              characters: ['👧🏾', '🧙‍♂️'],
+              culturalContext: 'African Village'
+            },
+            // More modules would go here
+          ];
           break;
         // Add cases for other missions as they are developed
-        // case 'phishing-detector':
-        //   modules = phishingStoryModules;
-        //   break;
-        // case 'privacy-protector':
-        //   modules = privacyStoryModules;
-        //   break;
         default:
           throw new Error(`Unknown mission ID: ${missionId}`);
       }
@@ -80,7 +109,28 @@ const MissionStory: React.FC = () => {
     }
   };
 
-  // Handle loading state
+  // Get mission title for display
+  const getMissionTitle = () => {
+    switch (missionId) {
+      case 'password-palace':
+      case 'mission-1':
+        return "Mika's Password Palace";
+      case 'phishing-forest':
+        return "The Phisher in the Forest";
+      case 'trickster-message':
+        return "The Trickster's Messages";
+      case 'social-village':
+        return "The Social Village";
+      case 'digital-defenders':
+        return "Digital Defenders";
+      case 'safari-secrets':
+        return "Safari Secrets";
+      default:
+        return "Mission Story";
+    }
+  };
+
+  // Loading state
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center">
@@ -92,7 +142,7 @@ const MissionStory: React.FC = () => {
     );
   }
 
-  // Handle error state
+  // Error state
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -114,9 +164,7 @@ const MissionStory: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <h1 className={`${settings.fontSize === 'large' ? 'text-3xl' : settings.fontSize === 'small' ? 'text-xl' : 'text-2xl'} font-bold text-center mb-6`}>
-          {missionId === 'password-palace' || missionId === 'mission-1' 
-            ? "Mika's Password Palace" 
-            : "Mission Story"}
+          {getMissionTitle()}
         </h1>
         
         <div className={`mb-6 p-4 rounded-lg ${settings.highContrast ? 'bg-white border-2 border-black' : 'bg-blue-50 border border-blue-200'}`}>

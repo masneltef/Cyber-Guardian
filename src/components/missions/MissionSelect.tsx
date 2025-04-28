@@ -1,6 +1,7 @@
 // src/pages/missions/MissionSelect.tsx
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../features/store';
 import { fetchMissions, Mission } from '../../features/missions/missionsSlice';
 import MissionCard from '../../components/missions/MissionCard';
@@ -9,8 +10,10 @@ import { motion } from 'framer-motion';
 
 const MissionSelect: React.FC = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { settings } = useSensorySettings();
   const missionsState = useSelector((state: RootState) => state.missions);
+  const progressState = useSelector((state: RootState) => state.progress);
   
   // Extract properties safely with default values
   const missions = missionsState?.missions || [];
@@ -69,6 +72,20 @@ const MissionSelect: React.FC = () => {
       setFilteredMissions([]);
     }
   }, [missions, ageFilter, difficultyFilter, statusFilter, searchQuery]);
+
+  // Handle mission card click
+  const handleMissionClick = (missionId: string) => {
+    navigate(`/missions/${missionId}`);
+  };
+
+  // Calculate completion percentage for a mission
+  const getCompletionPercentage = (missionId: string) => {
+    const missionProgress = progressState?.missions[missionId];
+    if (missionProgress) {
+      return missionProgress.storyProgress || 0;
+    }
+    return 0;
+  };
 
   // Loading state
   if (status === 'loading') {
@@ -200,7 +217,55 @@ const MissionSelect: React.FC = () => {
           </div>
         </div>
         
+        {/* Featured Mission - Password Palace */}
+        <div className="mb-8">
+          <h2 className={`${settings.fontSize === 'large' ? 'text-2xl' : settings.fontSize === 'small' ? 'text-xl' : 'text-xl'} font-bold text-gray-900 mb-4`}>
+            Featured Mission
+          </h2>
+          
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-blue-200">
+            <div className="md:flex">
+              <div className="md:w-1/3">
+                <img 
+                  src="/assets/images/missions/MikaPassword.png"
+                  alt="Mika's Password Palace" 
+                  className="w-full h-48 md:h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://via.placeholder.com/500x300/4299e1/ffffff?text=Password+Palace';
+                  }}
+                />
+              </div>
+              <div className="md:w-2/3 p-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Easy</span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Ages 6-10</span>
+                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">African Marketplace</span>
+                </div>
+                
+                <h3 className={`${settings.fontSize === 'large' ? 'text-2xl' : settings.fontSize === 'small' ? 'text-lg' : 'text-xl'} font-bold mb-2`}>
+                  Mika's Password Palace
+                </h3>
+                
+                <p className={`mb-4 ${settings.fontSize === 'small' ? 'text-sm' : 'text-base'}`}>
+                  Help Mika protect her village's digital marketplace by learning how to create strong passwords. Join her adventure and outsmart the Digital Trickster!
+                </p>
+                
+                <button
+                  onClick={() => navigate('/missions/password-palace')}
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-md ${settings.highContrast ? 'border-2 border-black' : ''} hover:bg-blue-700`}
+                >
+                  Start Mission
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         {/* Mission Cards Grid */}
+        <h2 className={`${settings.fontSize === 'large' ? 'text-2xl' : settings.fontSize === 'small' ? 'text-xl' : 'text-xl'} font-bold text-gray-900 mb-4`}>
+          All Missions
+        </h2>
+        
         {filteredMissions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMissions.map((mission) => (
@@ -214,7 +279,8 @@ const MissionSelect: React.FC = () => {
                 thumbnailUrl={mission.thumbnailUrl}
                 isCompleted={mission.isCompleted}
                 isLocked={mission.isLocked}
-                completionPercentage={30} // Adding the missing prop with a default value
+                completionPercentage={getCompletionPercentage(mission.id)}
+                onClick={() => handleMissionClick(mission.id)}
               />
             ))}
           </div>
